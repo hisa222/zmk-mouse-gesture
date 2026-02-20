@@ -485,38 +485,34 @@ static int input_processor_mouse_gesture_handle_event(const struct device *dev,
     ARG_UNUSED(param2);
     ARG_UNUSED(state);
 
-    /* Only care about REL_X / REL_Y events */
     if (!(event->type == INPUT_EV_REL &&
           (event->code == INPUT_REL_X || event->code == INPUT_REL_Y))) {
         return ZMK_INPUT_PROC_CONTINUE;
     }
 
     struct input_processor_mouse_gesture_data *data = dev->data;
+    const struct input_processor_mouse_gesture_config *config = dev->config;
 
-    /* ジェスチャがアクティブな場合はポインタ移動をブロック */
-    if (data->is_active) {
-        /* Ignore small movements */
-        const struct input_processor_mouse_gesture_config *config = dev->config;
-        if (abs(event->value) < config->movement_threshold) {
-            return ZMK_INPUT_PROC_STOP;  // 小さい動きもブロック
+    if (atomic_get(&data->is_active)) {
+        /* ジェスチャ認識へ投入 */
+        if (abs(event->value) >= config->movement_threshold) {
+            struct mouse_rel_msg msg = {
+                .dev = dev,
+                .code = event->code,
+                .value = event->value,
+            };
+            if (k_msgq_put(&mouse_rel_msgq, &msg, K_MSEC(10)) != 0) {
+                LOG_WRN("Mouse rel queue full – movement dropped");
+            }
+            k_work_submit(&gesture_exec_work);
         }
 
-        struct mouse_rel_msg msg = {
-            .dev = dev,
-            .code = event->code,
-            .value = event->value,
-        };
-
-        if (k_msgq_put(&mouse_rel_msgq, &msg, K_MSEC(10)) != 0) {
-            LOG_WRN("Mouse rel queue full – movement dropped");
-        }
-
-        k_work_submit(&gesture_exec_work);
-
-        return ZMK_INPUT_PROC_STOP;  // ← ポインタへ流さない
+        /* zip_xy_scaler 0 と同等: value を 0 に書き換えて流す */
+        event->value = 0;
+        return ZMK_INPUT_PROC_CONTINUE;
     }
 
-    return ZMK_INPUT_PROC_CONTINUE;  // 非アクティブ時は通常通り
+    return ZMK_INPUT_PROC_CONTINUE;
 }
 
 static int input_processor_mouse_gesture_init(const struct device *dev) {
