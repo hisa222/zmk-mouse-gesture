@@ -510,14 +510,6 @@ static int input_processor_mouse_gesture_handle_event(const struct device *dev,
 
     k_work_submit(&gesture_exec_work);
 
-// 追記
-    struct input_processor_mouse_gesture_data *data = dev->data;
-    
-    if (config->enable_eager_mode && data->is_active) {
-        return ZMK_INPUT_PROC_STOP;
-    }
-// 追記終わり
-
     return ZMK_INPUT_PROC_CONTINUE;
 }
 
