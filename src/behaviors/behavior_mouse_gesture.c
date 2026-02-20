@@ -54,18 +54,20 @@ static int on_keymap_binding_pressed(struct zmk_behavior_binding *binding,
     struct behavior_mouse_gesture_data *data = dev->data;
     const struct behavior_mouse_gesture_config *config = dev->config;
 
-    // Use configured toggle mode
     bool new_state = data->is_active;
+    bool force_event = false;
 
     switch (config->toggle_mode) {
         case TOGGLE_MODE_ON:
             LOG_DBG("Mouse gesture enabled");
             new_state = true;
+            force_event = true;
             break;
 
         case TOGGLE_MODE_OFF:
             LOG_DBG("Mouse gesture disabled");
             new_state = false;
+            force_event = true;
             break;
 
         case TOGGLE_MODE_MOMENTARY:
@@ -80,8 +82,8 @@ static int on_keymap_binding_pressed(struct zmk_behavior_binding *binding,
             break;
     }
 
-    // Update state and raise event if changed
-    if (data->is_active != new_state) {
+    // Update state and raise event if changed, or if forced (ON/OFF modes)
+    if (force_event || data->is_active != new_state) {
         data->is_active = new_state;
         raise_state_change_event(new_state);
     }
