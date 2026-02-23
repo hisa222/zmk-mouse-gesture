@@ -477,6 +477,46 @@ static int input_processor_mouse_gesture_handle_event_locked(const struct device
     return ZMK_INPUT_PROC_CONTINUE;
 }
 
+//activate multiple input devtces
+//--------
+static int input_processor_mouse_gesture_handle_event(const struct device *dev,
+                                                      struct input_event *event,
+                                                      uint32_t param1, uint32_t param2,
+                                                      struct zmk_input_processor_state *state) {
+    ARG_UNUSED(param1);
+    ARG_UNUSED(param2);
+    ARG_UNUSED(state);
+
+    if (!(event->type == INPUT_EV_REL &&
+          (event->code == INPUT_REL_X || event->code == INPUT_REL_Y))) {
+        return ZMK_INPUT_PROC_CONTINUE;
+    }
+
+    struct input_processor_mouse_gesture_data *data = dev->data;
+    const struct input_processor_mouse_gesture_config *config = dev->config;
+
+    // atomic_get ではなく直接 bool を読む
+    if (data->is_active) {
+        if (abs(event->value) >= (int32_t)config->movement_threshold) {
+            struct mouse_rel_msg msg = {
+                .dev = dev,
+                .code = event->code,
+                .value = event->value,
+            };
+            if (k_msgq_put(&mouse_rel_msgq, &msg, K_MSEC(10)) != 0) {
+                LOG_WRN("Mouse rel queue full – movement dropped");
+            }
+            k_work_submit(&gesture_exec_work);
+        }
+
+        event->value = 0;
+        return ZMK_INPUT_PROC_CONTINUE;
+    }
+
+    return ZMK_INPUT_PROC_CONTINUE;
+}
+//--------
+/*
 static int input_processor_mouse_gesture_handle_event(const struct device *dev,
                                                       struct input_event *event,
                                                       uint32_t param1, uint32_t param2,
@@ -494,7 +534,7 @@ static int input_processor_mouse_gesture_handle_event(const struct device *dev,
     const struct input_processor_mouse_gesture_config *config = dev->config;
 
     if (atomic_get(&data->is_active)) {
-        /* ジェスチャ認識へ投入 */
+        // ジェスチャ認識へ投入
         if (abs(event->value) >= config->movement_threshold) {
             struct mouse_rel_msg msg = {
                 .dev = dev,
@@ -507,13 +547,14 @@ static int input_processor_mouse_gesture_handle_event(const struct device *dev,
             k_work_submit(&gesture_exec_work);
         }
 
-        /* zip_xy_scaler 0 と同等: value を 0 に書き換えて流す */
+        // zip_xy_scaler 0 と同等: value を 0 に書き換えて流す 
         event->value = 0;
         return ZMK_INPUT_PROC_CONTINUE;
     }
 
     return ZMK_INPUT_PROC_CONTINUE;
 }
+*/
 
 static int input_processor_mouse_gesture_init(const struct device *dev) {
     LOG_INF("Mouse gesture input processor init start");
