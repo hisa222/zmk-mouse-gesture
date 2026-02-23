@@ -365,8 +365,7 @@ static int mouse_gesture_state_listener(const zmk_event_t *eh) {
         return ZMK_EV_EVENT_BUBBLE;
     }
 
-// activate multiple input devices
-/*
+
     // Find the first input processor device instance
     const struct device *dev = NULL;
 
@@ -400,32 +399,7 @@ static int mouse_gesture_state_listener(const zmk_event_t *eh) {
     }
 
     k_mutex_unlock(&data->lock);
-*/
-//---------
-#define GESTURE_UPDATE_INST(n)
-    {
-        const struct device *dev = DEVICE_DT_INST_GET(n);
-        if (dev != NULL) {
-            struct input_processor_mouse_gesture_data *data = dev->data;
-            int ret = k_mutex_lock(&data->lock, K_MSEC(10));
-            if (ret < 0) {
-                LOG_WRN("Failed to acquire mutex for inst " #n ": %d", ret);
-            } else {
-                bool old_state = data->is_active;
-                data->is_active = ev->is_active;
-                if (old_state != ev->is_active) {
-                    clear_gesture_data_locked(data);
-                    LOG_INF("Gesture state changed (inst " #n "): %s",
-                            ev->is_active ? "ACTIVE" : "INACTIVE");
-                }
-                k_mutex_unlock(&data->lock);
-            }
-        }
-    }
 
-DT_INST_FOREACH_STATUS_OKAY(GESTURE_UPDATE_INST)
-#undef GESTURE_UPDATE_INST
-//---------
     return ZMK_EV_EVENT_BUBBLE;
 }
 
