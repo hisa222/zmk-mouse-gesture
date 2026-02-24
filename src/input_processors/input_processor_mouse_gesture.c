@@ -477,6 +477,43 @@ static int input_processor_mouse_gesture_handle_event_locked(const struct device
     return ZMK_INPUT_PROC_CONTINUE;
 }
 
+/*
+static int input_processor_mouse_gesture_handle_event(const struct device *dev,
+                                                      struct input_event *event,
+                                                      uint32_t param1, uint32_t param2,
+                                                      struct zmk_input_processor_state *state) {
+    ARG_UNUSED(param1);
+    ARG_UNUSED(param2);
+    ARG_UNUSED(state);
+
+    // Only care about REL_X / REL_Y events
+    if (!(event->type == INPUT_EV_REL &&
+          (event->code == INPUT_REL_X || event->code == INPUT_REL_Y))) {
+        return ZMK_INPUT_PROC_CONTINUE;
+    }
+
+    // Ignore small movements  
+    const struct input_processor_mouse_gesture_config *config = dev->config;
+    if (abs(event->value) < config->movement_threshold) {
+        return ZMK_INPUT_PROC_CONTINUE;
+    }
+
+    struct mouse_rel_msg msg = {
+        .dev = dev,
+        .code = event->code,
+        .value = event->value,
+    };
+
+    if (k_msgq_put(&mouse_rel_msgq, &msg, K_MSEC(10)) != 0) {
+        // Queue full – drop smallest importance events
+        LOG_WRN("Mouse rel queue full – movement dropped");
+    }
+
+    k_work_submit(&gesture_exec_work);
+
+    return ZMK_INPUT_PROC_CONTINUE;
+}
+*/
 
 static int input_processor_mouse_gesture_handle_event(const struct device *dev,
                                                       struct input_event *event,
